@@ -5,7 +5,7 @@ import platform
 import subprocess
 from datetime import datetime
 
-# Folder templates
+# --------------------- Templates ---------------------
 PERSONAL_PROJECT_TEMPLATE = {
     "CAD": {"Mechanical": {}, "Electrical": {}},
     "Code": {},
@@ -27,8 +27,19 @@ BUSINESS_PROJECT_TEMPLATE = {
     "Schedule": {},
 }
 
+# --------------------- Helpers ---------------------
+def valid_path(path: str) -> str:
+    """Ensure the path has no spaces and is not empty."""
+    while True:
+        if " " in path:
+            print("❌ Paths cannot contain spaces. Please enter a valid path.")
+            path = input("Enter the base 'Data' folder path (no spaces, default: ./Data): ").strip() or "Data"
+        elif path == "":
+            path = "Data"
+        else:
+            return path
+
 def create_structure(base_path, structure):
-    """Recursively create folders according to a nested dictionary."""
     for name, sub in structure.items():
         folder_path = os.path.join(base_path, name)
         os.makedirs(folder_path, exist_ok=True)
@@ -36,7 +47,6 @@ def create_structure(base_path, structure):
             create_structure(folder_path, sub)
 
 def next_project_number(projects_path, identifier):
-    """Find next sequential project number for a given customer or category."""
     if not os.path.exists(projects_path):
         return 1
     pattern = re.compile(rf"^{re.escape(identifier)}_(\d{{4}})_", re.IGNORECASE)
@@ -51,7 +61,6 @@ def next_project_number(projects_path, identifier):
     return max(numbers, default=0) + 1
 
 def ensure_csv(csv_path):
-    """Create CSV file with headers if missing."""
     if not os.path.exists(csv_path):
         os.makedirs(os.path.dirname(csv_path), exist_ok=True)
         with open(csv_path, "w", newline='', encoding="utf-8") as f:
@@ -59,69 +68,56 @@ def ensure_csv(csv_path):
             writer.writerow(["Category", "ProjectName", "Path", "Timestamp"])
 
 def update_csv(csv_path, category, project_name, project_path):
-    """Add entry and sort CSV alphabetically."""
     ensure_csv(csv_path)
     rows = []
-
-    # Read existing entries
     with open(csv_path, "r", newline='', encoding="utf-8") as f:
         reader = csv.reader(f)
         headers = next(reader)
         for row in reader:
             rows.append(row)
-
-    # Add new entry
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     rows.append([category.capitalize(), project_name, os.path.abspath(project_path), timestamp])
-
-    # Sort alphabetically by Category then ProjectName
     rows.sort(key=lambda x: (x[0].lower(), x[1].lower()))
-
-    # Write back
     with open(csv_path, "w", newline='', encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(headers)
         writer.writerows(rows)
 
 def open_folder(path):
-    """Open a folder cross-platform."""
     system = platform.system()
     try:
         if system == "Windows":
             os.startfile(path)
-        elif system == "Darwin":  # macOS
+        elif system == "Darwin":
             subprocess.Popen(["open", path])
-        else:  # Linux
+        else:
             subprocess.Popen(["xdg-open", path])
     except Exception as e:
         print(f"⚠️  Could not open folder: {e}")
 
 def get_business_projects_path(root):
-    """Detect whether business projects are split and return correct folder."""
+    """Detect whether Business projects are split and return appropriate folder."""
     projects_root = os.path.join(root, "Business", "Projects")
     design_path = os.path.join(projects_root, "Design")
     mfg_path = os.path.join(projects_root, "Manufacturing")
-
     if os.path.exists(design_path) and os.path.exists(mfg_path):
-        # Split project folders exist
         choice = ""
         while choice not in ["design", "manufacturing"]:
             choice = input("Business projects are split. Choose folder ('Design' or 'Manufacturing'): ").strip().lower()
         return design_path if choice == "design" else mfg_path
-    else:
-        # Fallback: single folder (All_Projects or Projects)
-        all_projects = os.path.join(projects_root, "All_Projects")
-        os.makedirs(all_projects, exist_ok=True)
-        return all_projects
+    all_projects = os.path.join(projects_root, "All_Projects")
+    os.makedirs(all_projects, exist_ok=True)
+    return all_projects
 
+# --------------------- Core Logic ---------------------
 def add_project():
     root = input("Enter the base 'Data' folder path (default: ./Data): ").strip() or "Data"
+    root = valid_path(root)
 
     category = ""
     while category not in ["personal", "business"]:
         category = input("Project category ('personal' or 'business'): ").strip().lower()
 
-    # Handle identifier differently for personal vs business
     if category == "business":
         identifier = input("Enter the customer or client name: ").strip().replace(" ", "_")
         if not identifier:
@@ -152,7 +148,6 @@ def add_project():
     os.makedirs(project_path, exist_ok=True)
     create_structure(project_path, template)
 
-    # Add README.md
     readme_path = os.path.join(project_path, "README.md")
     with open(readme_path, "w", encoding="utf-8") as f:
         f.write(f"# {project_name}\n\n")
@@ -162,20 +157,17 @@ def add_project():
 
     print(f"\n✅ Created new {category} project:")
     print(f"📁 {os.path.abspath(project_path)}")
-    print(f"🗒️  README.md added inside project folder")
+    print("🗒️  README.md added inside project folder")
 
-    # Update master CSV index
     csv_path = os.path.join(root, "project_index", "projects.csv")
     update_csv(csv_path, category, project_name, project_path)
     print(f"📊 Project added to index: {os.path.abspath(csv_path)}")
 
-    # Prompt to open folder
     open_choice = input("\nOpen this project folder now? (y/n): ").strip().lower()
     if open_choice == "y":
         open_folder(project_path)
 
 def main():
-    """Main loop allowing repeated project creation."""
     while True:
         add_project()
         again = input("\nWould you like to create another project? (y/n): ").strip().lower()
