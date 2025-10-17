@@ -8,12 +8,6 @@ BASE_STRUCTURE = {
         "Media": {},
         "Reference": {},
     },
-    "Family_Shared": {
-        "Photos": {"Events": {}, "Holidays": {}, "Misc": {}},
-        "Documents": {"Finances": {}, "Health": {}, "Legal": {}, "Plans": {}},
-        "Videos": {},
-        "Shared_Projects": {},
-    },
     "Business": {
         "Projects": {"Archive": {}},
         "Admin": {"Contracts": {}, "Invoices": {}, "HR": {}, "Templates": {}},
