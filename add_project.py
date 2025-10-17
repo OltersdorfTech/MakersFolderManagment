@@ -96,6 +96,24 @@ def open_folder(path):
     except Exception as e:
         print(f"⚠️  Could not open folder: {e}")
 
+def get_business_projects_path(root):
+    """Detect whether business projects are split and return correct folder."""
+    projects_root = os.path.join(root, "Business", "Projects")
+    design_path = os.path.join(projects_root, "Design")
+    mfg_path = os.path.join(projects_root, "Manufacturing")
+
+    if os.path.exists(design_path) and os.path.exists(mfg_path):
+        # Split project folders exist
+        choice = ""
+        while choice not in ["design", "manufacturing"]:
+            choice = input("Business projects are split. Choose folder ('Design' or 'Manufacturing'): ").strip().lower()
+        return design_path if choice == "design" else mfg_path
+    else:
+        # Fallback: single folder (All_Projects or Projects)
+        all_projects = os.path.join(projects_root, "All_Projects")
+        os.makedirs(all_projects, exist_ok=True)
+        return all_projects
+
 def add_project():
     root = input("Enter the base 'Data' folder path (default: ./Data): ").strip() or "Data"
 
@@ -121,7 +139,11 @@ def add_project():
         print("❌ Code name cannot be empty.")
         return
 
-    projects_root = os.path.join(root, category.capitalize(), "Projects")
+    if category == "business":
+        projects_root = get_business_projects_path(root)
+    else:
+        projects_root = os.path.join(root, "Personal", "Projects")
+
     next_num = next_project_number(projects_root, identifier)
     project_name = f"{identifier}_{next_num:04d}_{code_name}"
 
